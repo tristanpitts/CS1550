@@ -7,6 +7,11 @@ struct node{
   //push function adds a new node at the end
 }
 
+struct linkedList{
+  struct node *head;
+  struct node *tail;
+}
+
 int pop(sem *s)
 {
   int psid = s->head->data;

@@ -9,7 +9,6 @@
 struct cs1550_sem {
    int value;
    //linked list. data is PSID?
-   struct node *head;
-   struct node *tail;
+   struct linkedList *list;
 };
 #endif
