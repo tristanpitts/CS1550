@@ -4,11 +4,17 @@
  (e) moh18@pitt.edu
 */
 
+struct node{
+  int data; //process id
+  struct node *next;
+}
+
 #ifndef SEM_H_INCLUDED
 #define SEM_H_INCLUDED
 struct cs1550_sem {
    int value;
    //linked list. data is PSID?
-   struct linkedList *list;
+   struct node *head;
+   struct node *tail;
 };
 #endif

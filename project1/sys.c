@@ -43,6 +43,8 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+#include "list.h"
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -2357,23 +2359,40 @@ int orderly_poweroff(bool force)
 	return ret;
 }
 
+DEFINE_SPINLOCK(semaphore_lock);
 /* BEGIN */
 #include "../../sem.h"
 asmlinkage long cs1550_down(struct cs1550_sem *sem) {
      printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
 		 //critical
+		 spin_lock(&semaphore_lock);
 		 sem->value--;
      printk(KERN_WARNING "Semaphore value (after decrement) %d\n", sem->value);
-		 //check for sleep, unlock
+		 if(sem->value < 0)
+		 //check for sleep, unlock. If sleep, add to queue
+		 if (sem->value < 0)
+		 {
+		 	sem->tail->next = kmalloc(sizeof(struct node), NULL);
+			sem->tail = sem->tail->next;
+			sem->tail->data = getpid();
+		 }
+		 spin_unlock(&semaphore_lock);
+		 sleep();
 	   return 0;
 }
 
 asmlinkage long cs1550_up(struct cs1550_sem *sem) {
      printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
 		 //critical
+		 spin_lock(&semaphore_lock);
 		 sem->value++;
 		 //pop item from stack, resume, unlock
+		 pid_t pid = sem->head->data;
+		 node *free = sem->head;
+		 sem->head = sem->head->next;
+		 kfree(free);
      printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
+		 spin_unlock(&semaphore_lock);
      return 0;
 }
 /* END */
