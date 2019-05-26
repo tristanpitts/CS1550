@@ -2378,12 +2378,12 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 			if(sem->head == NULL)
 			{
 				sem->head = current_process;
-				sem->tail=current_process
+				sem->tail=current_process;
 			}
 			else
 			{
 				sem->tail->next = current_process;
-				sem->tail = sem->tail>next;
+				sem->tail = sem->tail->next;
 			}
 			set_current_state(TASK_INTERRUPTIBLE);
 			spin_unlock(&semaphore_lock);
