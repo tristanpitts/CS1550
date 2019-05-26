@@ -2394,7 +2394,7 @@ asmlinkage long cs1550_up(struct cs1550_sem *sem) {
 		 sem->size--;
 		 //pop item from stack, resume, unlock
 		 pid_t pid = sem->head->data;
-		 node *free = sem->head;
+		 struct node *free = sem->head;
 		 sem->head = sem->head->next;
 		 kfree(free);
      printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
