@@ -5,7 +5,7 @@
 */
 
 typedef struct cs1550_node{
-  int data; //process id
+  struct task_struct *process; //process id
   struct node *next;
 } node;
 
@@ -13,7 +13,6 @@ typedef struct cs1550_node{
 #define SEM_H_INCLUDED
 struct cs1550_sem {
    int value;
-   int size; //number of processes in queue
    //linked list. data is PSID?
    node *head;
    node *tail;

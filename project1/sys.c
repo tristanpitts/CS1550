@@ -43,8 +43,6 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
-#include "list.h"
-
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -99,7 +97,7 @@ EXPORT_SYMBOL(fs_overflowgid);
  */
 
 int C_A_D = 1;
-struct pid *cad_pid;
+struct pid *cad_pid;pid
 EXPORT_SYMBOL(cad_pid);
 
 /*
@@ -2371,12 +2369,12 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 //check for sleep, unlock. If sleep, add to queue
 		 if (sem->value < 0)
 		 {
-		 	sem->tail->next = kmalloc(sizeof(node), NULL);
+		 	sem->tail->next = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
 			sem->tail = sem->tail->next;
-			sem->tail->data = getpid();
-			sem->size++;
+			sem->tail->process = current;
+			set_current_state(TASK_INTERRUPTABLE);
 			spin_unlock(&semaphore_lock);
-			sleep();
+			schedule();
 		 }
 		 else
 		 {
@@ -2391,11 +2389,10 @@ asmlinkage long cs1550_up(struct cs1550_sem *sem) {
 		 //critical
 		 spin_lock(&semaphore_lock);
 		 sem->value++;
-		 sem->size--;
 		 //pop item from stack, resume, unlock
-		 pid_t pid = sem->head->data;
 		 node *free = sem->head;
 		 sem->head = sem->head->next;
+		 wake_up_process(free->process);
 		 kfree(free);
      printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
 		 spin_unlock(&semaphore_lock);
