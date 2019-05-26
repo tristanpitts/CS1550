@@ -7,7 +7,7 @@
 typedef struct node{
   int data; //process id
   struct node *next;
-};
+} node;
 
 #ifndef SEM_H_INCLUDED
 #define SEM_H_INCLUDED
