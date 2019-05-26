@@ -43,6 +43,8 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+#include <linux/sched.h>
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
