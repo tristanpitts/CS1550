@@ -4,7 +4,7 @@
  (e) moh18@pitt.edu
 */
 
-struct node{
+typedef struct node{
   int data; //process id
   struct node *next;
 };
