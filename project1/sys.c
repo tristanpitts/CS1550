@@ -2360,6 +2360,8 @@ int orderly_poweroff(bool force)
 DEFINE_SPINLOCK(semaphore_lock);
 /* BEGIN */
 #include "../../sem.h"
+//FIX SCENARIOS LIKE NULL LIST AND ALL THAT****************************
+//CHECK IF LIST IS EMPTY OR IF THERES ONLY ONE THING LEFT
 asmlinkage long cs1550_down(struct cs1550_sem *sem) {
      printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
 		 //critical
@@ -2369,9 +2371,18 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 //check for sleep, unlock. If sleep, add to queue
 		 if (sem->value < 0)
 		 {
-		 	sem->tail->next = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
-			sem->tail = sem->tail->next;
-			sem->tail->process = current;
+			if(sem->head == NULL && sem->tail==NULL)
+			{
+				sem->head = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
+				sem->tail = sem->head;
+				sem->head->process = current;
+			}
+			else
+			{
+				sem->tail->next = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
+				sem->tail = sem->tail->next;
+				sem->tail->process = current;
+			}
 			set_current_state(TASK_INTERRUPTIBLE);
 			spin_unlock(&semaphore_lock);
 			schedule();
