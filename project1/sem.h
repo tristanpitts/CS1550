@@ -5,7 +5,7 @@
 */
 
 typedef struct cs1550_node{
-  struct task_struct *process; //process id
+  struct task_struct *process; //process info
   struct cs1550_node *next;
 } node;
 
@@ -13,7 +13,7 @@ typedef struct cs1550_node{
 #define SEM_H_INCLUDED
 struct cs1550_sem {
    int value;
-   struct cs1550_node *head;
+   struct cs1550_node *head; //queue is implemented using a linked list
    struct cs1550_node *tail;
 };
 #endif

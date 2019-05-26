@@ -324,5 +324,5 @@ ENTRY(sys_call_table)
 	.long sys_timerfd
 	.long sys_eventfd
 	.long sys_fallocate
-	.long cs1550_down
+	.long cs1550_down //add syscalls for semaphore up and down to the table
 	.long cs1550_up

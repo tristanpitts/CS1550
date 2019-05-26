@@ -2357,25 +2357,25 @@ int orderly_poweroff(bool force)
 	return ret;
 }
 
-DEFINE_SPINLOCK(semaphore_lock);
+DEFINE_SPINLOCK(semaphore_lock); //initialize spinlock
 /* BEGIN */
 #include "../../sem.h"
 //FIX SCENARIOS LIKE NULL LIST AND ALL THAT****************************
 //CHECK IF LIST IS EMPTY OR IF THERES ONLY ONE THING LEFT
 asmlinkage long cs1550_down(struct cs1550_sem *sem) {
-     printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
+     //printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
 		 //critical
-		 spin_lock(&semaphore_lock);
+		 spin_lock(&semaphore_lock); //critical section
 		 sem->value--;
-     printk(KERN_WARNING "Semaphore value (after decrement) %d\n", sem->value);
-		 //check for sleep, unlock. If sleep, add to queue
-		 if (sem->value < 0)
+     //printk(KERN_WARNING "Semaphore value (after decrement) %d\n", sem->value);
+
+		 if (sem->value < 0) //if this is the case the process will be added to the queue and then sleep
 		 {
 			struct cs1550_node * current_process = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), GFP_ATOMIC);
 			current_process->process = current;
 			current_process->next=NULL;
 
-			if(sem->head == NULL)
+			if(sem->head == NULL) //if linked list is empty
 			{
 				sem->head = current_process;
 				sem->tail=current_process;
@@ -2399,18 +2399,18 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 }
 
 asmlinkage long cs1550_up(struct cs1550_sem *sem) {
-     printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
+     //printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
 		 //critical
-		 spin_lock(&semaphore_lock);
+		 spin_lock(&semaphore_lock); //critical section
 		 sem->value++;
 		 //pop item from stack, resume, unlock
 		 if(sem->value<=0)
 		 {
 			 struct cs1550_node * wake_process = sem->head;
 
-			 if(wake_process != NULL)
+			 if(wake_process != NULL)  //if process exists
 			 {
-				 if(sem->head == sem->tail)
+				 if(sem->head == sem->tail)///if there is only one process in the linked list
 				 {
 					 sem->head = NULL;
 					 sem->tail = NULL;
@@ -2420,13 +2420,13 @@ asmlinkage long cs1550_up(struct cs1550_sem *sem) {
 					 sem->head=sem->head->next;
 				 }
 
-				wake_up_process(wake_process->process);
+				wake_up_process(wake_process->process);//wake up process from linked list
 			 }
 
-			 kfree(wake_process);
+			 kfree(wake_process);//free node previously occupied by process that we just woke up
 		 }
 
-     printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
+     //printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
 		 spin_unlock(&semaphore_lock);
      return 0;
 }
