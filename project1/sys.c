@@ -2371,7 +2371,7 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 //check for sleep, unlock. If sleep, add to queue
 		 if (sem->value < 0)
 		 {
-		 	sem->tail->next = kmalloc(sizeof(struct node), NULL);
+		 	sem->tail->next = kmalloc(sizeof(node), NULL);
 			sem->tail = sem->tail->next;
 			sem->tail->data = getpid();
 			sem->size++;
