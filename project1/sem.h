@@ -7,12 +7,13 @@
 struct node{
   int data; //process id
   struct node *next;
-}
+};
 
 #ifndef SEM_H_INCLUDED
 #define SEM_H_INCLUDED
 struct cs1550_sem {
    int value;
+   int size; //number of processes in queue
    //linked list. data is PSID?
    struct node *head;
    struct node *tail;

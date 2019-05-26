@@ -2368,16 +2368,21 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 spin_lock(&semaphore_lock);
 		 sem->value--;
      printk(KERN_WARNING "Semaphore value (after decrement) %d\n", sem->value);
-		 if(sem->value < 0)
 		 //check for sleep, unlock. If sleep, add to queue
 		 if (sem->value < 0)
 		 {
 		 	sem->tail->next = kmalloc(sizeof(struct node), NULL);
 			sem->tail = sem->tail->next;
 			sem->tail->data = getpid();
+			sem->size++;
+			spin_unlock(&semaphore_lock);
+			sleep();
 		 }
-		 spin_unlock(&semaphore_lock);
-		 sleep();
+		 else
+		 {
+			 spin_unlock(&semaphore_lock);
+		 }
+
 	   return 0;
 }
 
@@ -2386,6 +2391,7 @@ asmlinkage long cs1550_up(struct cs1550_sem *sem) {
 		 //critical
 		 spin_lock(&semaphore_lock);
 		 sem->value++;
+		 sem->size--;
 		 //pop item from stack, resume, unlock
 		 pid_t pid = sem->head->data;
 		 node *free = sem->head;
