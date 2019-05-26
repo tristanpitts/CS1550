@@ -43,8 +43,6 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
-#include <linux/sched.h>
-
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -2374,7 +2372,7 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 	sem->tail->next = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
 			sem->tail = sem->tail->next;
 			sem->tail->process = current;
-			set_current_state(TASK_INTERRUPTABLE);
+			set_current_state(TASK_INTERRUPTIBLE);
 			spin_unlock(&semaphore_lock);
 			schedule();
 		 }
