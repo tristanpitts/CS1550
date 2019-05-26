@@ -2371,22 +2371,25 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 		 //check for sleep, unlock. If sleep, add to queue
 		 if (sem->value < 0)
 		 {
-			if(sem->head == NULL && sem->tail==NULL)
+			struct cs1550_node * current_process = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), GFP_ATOMIC);
+			current_process->process = current;
+			current_process->next=NULL;
+
+			if(sem->head == NULL)
 			{
-				sem->head = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
-				sem->tail = sem->head;
-				sem->head->process = current;
+				sem->head = current_process;
+				sem->tail=current_process
 			}
 			else
 			{
-				sem->tail->next = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), 0);
-				sem->tail = sem->tail->next;
-				sem->tail->process = current;
+				sem->tail->next = current_process;
+				sem->tail = sem->tail>next;
 			}
 			set_current_state(TASK_INTERRUPTIBLE);
 			spin_unlock(&semaphore_lock);
 			schedule();
 		 }
+
 		 else
 		 {
 			 spin_unlock(&semaphore_lock);
@@ -2401,10 +2404,28 @@ asmlinkage long cs1550_up(struct cs1550_sem *sem) {
 		 spin_lock(&semaphore_lock);
 		 sem->value++;
 		 //pop item from stack, resume, unlock
-		 node *free = sem->head;
-		 sem->head = sem->head->next;
-		 wake_up_process(free->process);
-		 kfree(free);
+		 if(sem->value<=0)
+		 {
+			 struct cs1550_node * wake_process = sem->head;
+
+			 if(wake_process != NULL)
+			 {
+				 if(sem->head == sem->tail)
+				 {
+					 sem->head = NULL;
+					 sem->tail = NULL;
+				 }
+				 else
+				 {
+					 sem->head=sem->head->next;
+				 }
+
+				wake_up_process(wake_process->process);
+			 }
+
+			 kfree(wake_process);
+		 }
+
      printk(KERN_WARNING "Semaphore value (after increment) %d\n", sem->value);
 		 spin_unlock(&semaphore_lock);
      return 0;

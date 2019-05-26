@@ -6,15 +6,14 @@
 
 typedef struct cs1550_node{
   struct task_struct *process; //process id
-  struct node *next;
+  struct cs1550_node *next;
 } node;
 
 #ifndef SEM_H_INCLUDED
 #define SEM_H_INCLUDED
 struct cs1550_sem {
    int value;
-   //linked list. data is PSID?
-   node *head;
-   node *tail;
+   struct cs1550_node *head;
+   struct cs1550_node *tail;
 };
 #endif
