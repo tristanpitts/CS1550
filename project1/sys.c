@@ -2371,18 +2371,18 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 
 		 if (sem->value < 0) //if this is the case the process will be added to the queue and then sleep
 		 {
-			struct cs1550_node * current_process = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), GFP_ATOMIC);
+			struct cs1550_node * current_process = (struct cs1550_node*) kmalloc(sizeof(struct cs1550_node), GFP_ATOMIC); //GFP_ATOMIC flag so the kmalloc can't be interrupted
 			current_process->process = current;
 			current_process->next=NULL;
 
-			if(sem->head == NULL) //if linked list is empty
+			if(sem->head == NULL) //if linked list is empty create the first node
 			{
 				sem->head = current_process;
 				sem->tail=current_process;
 			}
 			else
 			{
-				sem->tail->next = current_process;
+				sem->tail->next = current_process;//if linked list is not empty just tack the current process on the back of the list
 				sem->tail = sem->tail->next;
 			}
 			set_current_state(TASK_INTERRUPTIBLE);
@@ -2400,10 +2400,9 @@ asmlinkage long cs1550_down(struct cs1550_sem *sem) {
 
 asmlinkage long cs1550_up(struct cs1550_sem *sem) {
      //printk(KERN_WARNING "semaphore value (current)         %d\n", sem->value);
-		 //critical
 		 spin_lock(&semaphore_lock); //critical section
 		 sem->value++;
-		 //pop item from stack, resume, unlock
+		 //remove next item from list, wake it up
 		 if(sem->value<=0)
 		 {
 			 struct cs1550_node * wake_process = sem->head;
