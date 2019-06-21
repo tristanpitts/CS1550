@@ -7,8 +7,12 @@
 #include <linux/unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <sched.h>
 #include "sem.h"
+
 
 void tenantArrives();
 void agentArrives();
@@ -32,6 +36,11 @@ struct options {
 	int num_agents;
 };
 
+static struct cs1550_sem *mutex;
+static int *numTenents;
+static bool *agentIsPresent;
+int startTime;
+
 int main(int argc, char** argv) {
 
     if(argc != 5) {
@@ -43,6 +52,7 @@ int main(int argc, char** argv) {
     opt.num_tenants = atoi(argv[2]);
     opt.num_agents = atoi(argv[4]);
 
+    startTime = time(NULL);
 
     //Allocate a shared memory region to store one semaphore
     struct cs1550_sem *sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
@@ -54,6 +64,44 @@ int main(int argc, char** argv) {
     // Allocate an array for storing tenant and agent ids
     pid_t *pids = (void *) mmap(NULL, sizeof(pid_t) * 2, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
     memset(pids, sizeof(pid_t) * 2, 0);
+
+    struct cs1550_sem *a_sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(a_sem, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    a_sem->value = 0;
+
+    struct cs1550_sem *aa_sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(aa_sem, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    aa_sem->value = 1;
+
+    struct cs1550_sem *t_sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(t_sem, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    t_sem->value = 0;
+
+    struct cs1550_sem *ti_sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(ti_sem, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    ti_sem->value = 0;
+
+    struct cs1550_sem *atl_sem = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(atl_sem, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    atl_sem->value = 0;
+
+    mutex = mmap(NULL, sizeof(struct cs1550_sem), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(mutex, sizeof(struct cs1550_sem), 0);
+    //Initialize the semaphore to 0
+    mutex->value = 1;
+
+    numTenents = mmap(NULL, sizeof(int), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(numTenents, sizeof(int), 0);
+    *numTenents = 0;
+
+    agentIsPresent = mmap(NULL, sizeof(bool), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, 0, 0);
+    memset(agentIsPresent, sizeof(bool), 0);
+    *agentIsPresent = false;
 
     //Create two tenant and agent processes
     int pid = fork(); // Create the first child process
@@ -67,8 +115,17 @@ int main(int argc, char** argv) {
             if(pids[0] == getpid()) {
                 pid = fork();
                 if(pid == 0) {
-                    printf("Child tenant: I am a grandchild process with pid=%d.\n", getpid());
                     tenantArrives();
+                    *numTenents++;
+                    up(t_sem);
+                    //printf("Sems from tenent: a_sem:%d aa_sem:%d t_sem:%d\n", a_sem->value, aa_sem->value, t_sem->value);
+                    down(a_sem);
+                    down(mutex);
+                    viewApt();
+                    tenantLeaves();
+                    up(mutex);
+                    up(ti_sem);
+                    exit(0);
                 }
             }
         }
@@ -92,7 +149,28 @@ int main(int argc, char** argv) {
                 if(pids[1] == getpid()) {
                     pid = fork();
                     if(pid == 0) {
-                        printf("Child agent: I am a grandchild process with pid=%d.\n", getpid());
+                        agentArrives();
+                        down(aa_sem);
+                        down(mutex);
+                        *agentIsPresent=true;
+                        up(mutex);
+                        down(t_sem);
+                        openApt();
+
+                        atl_sem->value=(-1)*a_sem->value;
+                        do
+                        {
+                          up(a_sem);
+                          down(t_sem);
+                          down(atl_sem);
+                        }while(atl_sem->value > 0);
+                        printf("POST LOOP\n");
+                        down(mutex);
+                        *agentIsPresent=false;
+                        up(mutex);
+                        up(aa_sem);
+                        agentLeaves();
+                        exit(0);
                     }
                 }
             }
@@ -123,30 +201,32 @@ int main(int argc, char** argv) {
 
 void tenantArrives()
 {
-
+    printf("Tenant %d arrives at time %d\n", getpid(), time(NULL) - startTime);
 }
 
 void agentArrives()
 {
-
+    printf("Agent %d arrives at time %d\n", getpid(), time(NULL) - startTime);
 }
 
 void viewApt()
 {
-
+    printf("Tenant %d inspects the apartment at time %d\n", getpid(), time(NULL) - startTime);
+    sleep(2);
 }
 
 void openApt()
 {
-
+    printf("Agent %d opens the apartment for inspection at time %d\n", getpid(), time(NULL) - startTime);
 }
 
 void agentLeaves()
 {
-
+    printf("Agent %d leaves the apartment at time %d\n", getpid(), time(NULL) - startTime);
 }
 
 void tenantLeaves()
 {
-
+    printf("Tenant %d leaves the apartment at time %d\n", getpid(), time(NULL) - startTime);
+    *numTenents--;
 }
