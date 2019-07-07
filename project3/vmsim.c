@@ -5,7 +5,7 @@
  * (c) Mohammad Hasanzadeh Mofrad, 2019
  * (e) moh18@pitt.edu
  */
- 
+
 #include "vmsim.h"
 int numframes;
 unsigned int *physical_frames;
@@ -20,34 +20,34 @@ int current_index = -1;
 int main(int argc, char *argv[]) {
    /*
     * Add sanity check for input arguments
-    * Open the memory trace file 
+    * Open the memory trace file
     * and store it in an array
     */
     if(argc != 6) {
-        fprintf(stderr, "USAGE: %s -n <numframes> -a <fifo> <tracefile>\n", argv[0]);
-        exit(1);         
+        fprintf(stderr, "USAGE: %s -n <numframes> -a <fifo | opt | aging> <tracefile>\n", argv[0]);
+        exit(1);
     }
-    
+
     numframes = atoi(argv[2]);
     char *algorithm = argv[4];
     char *filename = argv[5];
     FILE *file = fopen(filename,"rb");
     if(!file) {
         fprintf(stderr, "Error on opening %s\n", filename);
-        exit(1); 
+        exit(1);
     }
 
-    /* 
+    /*
      * Calculate the trace file's length
      * and read in the trace file
-     * and write it into addr_arr and mode_arr arrays 
+     * and write it into addr_arr and mode_arr arrays
      */
 
     unsigned int numaccesses = 0;
     unsigned char mode = '\0';
     unsigned int addr = 0;
     unsigned int cycles = 0;
-   
+
 
     // Calculate number of lines in the trace file
     while(fscanf(file, "%c %x %d\n", &mode, &addr, &cycles) == 3) {
@@ -58,13 +58,13 @@ int main(int argc, char *argv[]) {
     unsigned char mode_array[numaccesses];
     unsigned int address_array[numaccesses];
     unsigned int cycles_array[numaccesses];
-   
+
     unsigned int i = 0;
-    // Store the memory accesses 
+    // Store the memory accesses
     while(fscanf(file, "%c %x %d\n", &mode_array[i], &address_array[i], &cycles_array[i]) == 3) {
         i++;
     }
-    
+
     if(i != numaccesses) {
         printf("Arrays are populated incorrectly\n");
         exit(0);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error on closing %s\n", filename);
         exit(1);
     }
-   
+
     // Initialize the physical memory address space
     long frame_size = PAGE_SIZE_4KB / PAGE_SIZE_BYTES;
     long memory_size = frame_size * numframes;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     memset(physical_frames, 0, memory_size);
-    
+
     // Create the first frame of the frames linked list
     struct frame_struct *frame = malloc(sizeof(struct frame_struct));
     if(!frame) {
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
         frame = frame->next;
         memset(frame, 0, sizeof(struct frame_struct));
     }
-    
+
     // Initialize page table
     long page_table_size = PT_SIZE_1MB * PTE_SIZE_BYTES;
     page_table = malloc(page_table_size);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     memset(page_table, 0, page_table_size);
-    
+
     struct pte_32 *new_pte = NULL;
     unsigned char mode_type = '\0';
     unsigned int fault_address = 0;
@@ -134,9 +134,9 @@ int main(int argc, char *argv[]) {
         hit = 0;
         // Perform page walk for the fault address
         new_pte = (struct pte_32 *) handle_page_fault(fault_address);
-      
+
         /*
-         * Traverse the frames linked list    
+         * Traverse the frames linked list
          * to see if the requested page is present in
          * the frames linked list.
          */
@@ -160,15 +160,25 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        /* 
+        /*
          * If the requested page is not present in the
          * frames linked list use the fifo page replacement
          * to evict the victim frame and swap in the requested frame
-         */  
+         */
         if(!hit) {
             // Fifo page replacement algorithm
             if(!strcmp(algorithm, "fifo")) {
                 page2evict = fifo();
+            }
+
+            else if(!strcmp(algorithm, "opt"))
+            {
+              page2evict = opt();
+            }
+
+            else if(!strcmp(algorithm, "aging"))
+            {
+              page2evict = aging();
             }
 
            /* Traverse the frames linked list to
@@ -181,17 +191,17 @@ int main(int argc, char *argv[]) {
                 if(curr->frame_number == page2evict) {
                     previous_fault_address = curr->virtual_address;
                     numfaults++;
-                    
+
                     if(curr->pte_pointer) {
                         curr->pte_pointer->present = 0;
                     }
-                   
+
                     curr->pte_pointer = (struct pte_32 *) new_pte;
                     new_pte->physical_address = curr->physical_address;
                     new_pte->present = 1;
-                    curr->virtual_address = fault_address; 
+                    curr->virtual_address = fault_address;
                 }
-                curr = curr->next; 
+                curr = curr->next;
             }
         }
     }
@@ -227,15 +237,24 @@ struct frame_struct * handle_page_fault(unsigned int fault_address) {
     printf("Frame physical address:  %010ld (0x%08x)\n", pte->physical_address + FRAME_INDEX(fault_address), pte->physical_address + FRAME_INDEX(fault_address));
     printf("############################################\n");
     #endif
-    
+
     return ((struct frame_struct *) pte);
 }
 
 int fifo() {
     current_index++;
-    current_index = current_index % numframes;            
+    current_index = current_index % numframes;
     return (current_index);
 }
 
-/* ToDO: Implement your opt() and aging() page replacement algorithms */
+int opt()
+{
+  return 0;
+}
 
+int aging()
+{
+  return 0;
+}
+
+/* ToDO: Implement your opt() and aging() page replacement algorithms */
