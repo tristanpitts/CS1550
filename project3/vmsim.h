@@ -38,7 +38,7 @@ struct frame_struct {
    struct frame_struct *next;
 };
 
-// 32-Bit Root level Page Table Entry (PTE) 
+// 32-Bit Root level Page Table Entry (PTE)
 struct pte_32 {
    unsigned int present;
    unsigned int dirty;
@@ -50,5 +50,7 @@ struct frame_struct *handle_page_fault(unsigned int);
 
 // Fifo page replacement algorithm
 int fifo();
+int opt();
+int aging();
 
 #endif
