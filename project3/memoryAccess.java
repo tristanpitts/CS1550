@@ -8,7 +8,7 @@ public class memoryAccess
   {
     String[] temp = s.split(" ", 0);
     operation = temp[0].charAt(0);
-    address = Long.decode(temp[1]);
+    address = ((Long.decode(temp[1])) >> 12) & 0xfffff;
     cycles = Integer.parseInt(temp[2]);
   }
 }
