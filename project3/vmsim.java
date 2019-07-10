@@ -80,12 +80,13 @@ public class vmsim
 
     for(memoryAccess ma : accesses)
     {
-      /*for(frame f : physicalMemory)
-        System.out.print("["+f.virtual_address + "," + f.counter + "]" + " ");
-      System.out.println();*/
+      //for(frame f : physicalMemory)
+        //System.out.print("["+f.virtual_address + "," + f.counter + "]" + " ");
+      //System.out.println();
 
-      calcRefresh(ma.cycles);
-      ticks+=ma.cycles;
+      if(algorithm.equals("aging"))
+        calcRefresh(ma.cycles);
+
       found = false;
       if(pageTable.containsKey(ma.address))
       {
@@ -97,7 +98,6 @@ public class vmsim
               f.dirty=true;
               break;
             }
-
       }
 
       if(!found)
@@ -135,10 +135,11 @@ public class vmsim
         }
       }
 
+    if(algorithm.equals("aging"))
       for(frame f : physicalMemory)
         if(f.virtual_address == ma.address)
         {
-          f.counter = f.counter | (0x1 << 31);
+          f.counter = f.counter | (0x1 << 30);
           break;
         }
 
@@ -197,10 +198,11 @@ public class vmsim
 
   public static int aging()
   {
-    int min = physicalMemory.get(0).counter;
+    int min = Integer.MAX_VALUE;
     frame evict = null;
     for(frame f : physicalMemory)
     {
+      //System.out.println("page: " + f.virtual_address + " counter: " + f.counter);
       if(f.counter < min)
       {
         evict = f;
@@ -209,6 +211,7 @@ public class vmsim
       //System.out.println("f.counter " + f.counter + " min: " + min);
     }
 
+    //System.out.println("Evict: " + evict.virtual_address + " counter: " + evict.counter);
     return physicalMemory.indexOf(evict);
   }
 
@@ -216,20 +219,34 @@ public class vmsim
   {
     for(frame f : physicalMemory)
     {
-      f.counter=f.counter>>1;
-      if(f.dirty)
-      {
-        f.dirty = false;
-        writes++;
-      }
+      if(!f.dirty)
+        f.counter=f.counter>>1;
     }
   }
 
   public static void calcRefresh(int cycles)
   {
-    for(int i = ticks; i < ticks+cycles; i++)
-      if((i-1)%refresh==0)
+    //System.out.println("" + ticks + " r = " + refresh);
+
+    while(true)
+    {
+      if(ticks==refresh)
+      {
         shift();
+        ticks-=refresh;
+      }
+      else if(ticks!=refresh && cycles >= (refresh - ticks))
+      {
+        shift();
+        cycles-=(refresh-ticks);
+        ticks=0;
+      }
+      else
+      {
+        ticks+=cycles;
+        return;
+      }
+    }
     //from count before adding to count after adding if count-1%refresh==0 do a refresh;
   }
 
