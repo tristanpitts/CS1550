@@ -139,7 +139,7 @@ public class vmsim
       for(frame f : physicalMemory)
         if(f.virtual_address == ma.address)
         {
-          f.counter = f.counter | (0x1 << 30);
+          f.counter = f.counter | (0x1 << 31);
           break;
         }
 
@@ -203,12 +203,26 @@ public class vmsim
     for(frame f : physicalMemory)
     {
       //System.out.println("page: " + f.virtual_address + " counter: " + f.counter);
-      if(f.counter < min)
+      if(f.counter < min && !f.dirty)
       {
         evict = f;
         min = f.counter;
       }
       //System.out.println("f.counter " + f.counter + " min: " + min);
+    }
+
+    if(evict == null)
+    {
+      for(frame f : physicalMemory)
+      {
+        //System.out.println("page: " + f.virtual_address + " counter: " + f.counter);
+        if(f.counter < min)
+        {
+          evict = f;
+          min = f.counter;
+        }
+        //System.out.println("f.counter " + f.counter + " min: " + min);
+      }
     }
 
     //System.out.println("Evict: " + evict.virtual_address + " counter: " + evict.counter);
@@ -220,7 +234,7 @@ public class vmsim
     for(frame f : physicalMemory)
     {
       if(!f.dirty)
-        f.counter=f.counter>>1;
+        f.counter=Math.abs(f.counter>>1);
     }
   }
 
