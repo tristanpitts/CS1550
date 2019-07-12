@@ -15,6 +15,7 @@ public class vmsim
   public static int count;
   public static int ticks;
   public static int refresh;
+  public static int refreshCount;
 
   public static void main(String[] args) throws Exception
   {
@@ -39,6 +40,7 @@ public class vmsim
     }
 
     String temp;
+    refreshCount=0;
     count = 0;
     ticks=0;
     accesses = new ArrayList<memoryAccess>();
@@ -81,8 +83,10 @@ public class vmsim
     for(memoryAccess ma : accesses)
     {
       //for(frame f : physicalMemory)
-        //System.out.print("["+f.virtual_address + "," + f.counter + "]" + " ");
+        //System.out.print("["+f.virtual_address + "," + f.counter + "," + f.dirty + "]");
       //System.out.println();
+
+      //System.out.println("Looking for page: " + ma.address);
 
       if(algorithm.equals("aging"))
         calcRefresh(ma.cycles);
@@ -139,13 +143,13 @@ public class vmsim
       for(frame f : physicalMemory)
         if(f.virtual_address == ma.address)
         {
-          f.counter = f.counter | (0x1 << 31);
+          f.reference = 1;
           break;
         }
 
-      ticks++;
       count++;
     }
+    //System.out.println("Refreshes: " + refreshCount);
 
     System.out.println("Algorithm: " + algorithm.toUpperCase());
     System.out.println("Number of frames: " + frames);
@@ -198,70 +202,139 @@ public class vmsim
 
   public static int aging()
   {
-    int min = Integer.MAX_VALUE;
+    int type=0;
+    int min = 0xffff;
     frame evict = null;
-    for(frame f : physicalMemory)
-    {
-      //System.out.println("page: " + f.virtual_address + " counter: " + f.counter);
-      if(f.counter < min && !f.dirty)
-      {
-        evict = f;
-        min = f.counter;
-      }
-      //System.out.println("f.counter " + f.counter + " min: " + min);
-    }
-
-    if(evict == null)
+    do
     {
       for(frame f : physicalMemory)
       {
-        //System.out.println("page: " + f.virtual_address + " counter: " + f.counter);
-        if(f.counter < min)
+        if(f.counter <= min && !f.dirty && f.reference==0 && type==0)
         {
-          evict = f;
-          min = f.counter;
+          if(f.counter == min)
+          {
+            if(evict != null)
+            {
+              if(f.virtual_address < evict.virtual_address)
+              {
+                evict = f;
+                min = f.counter;
+                continue;
+              }
+            }
+          }
+          else
+          {
+            evict = f;
+            min = f.counter;
+          }
         }
-        //System.out.println("f.counter " + f.counter + " min: " + min);
-      }
-    }
 
-    //System.out.println("Evict: " + evict.virtual_address + " counter: " + evict.counter);
+        else if(f.counter <= min && f.dirty && f.reference==0 && type==1)
+        {
+          if(f.counter == min)
+          {
+            if(evict != null)
+            {
+              if(f.virtual_address < evict.virtual_address)
+              {
+                evict = f;
+                min = f.counter;
+                continue;
+              }
+            }
+          }
+          else
+          {
+            evict = f;
+            min = f.counter;
+          }
+        }
+
+        else if(f.counter <= min && !f.dirty && f.reference==1 && type == 2)
+        {
+          if(f.counter == min)
+          {
+            if(evict != null)
+            {
+              if(f.virtual_address < evict.virtual_address)
+              {
+                evict = f;
+                min = f.counter;
+                continue;
+              }
+            }
+          }
+          else
+          {
+            evict = f;
+            min = f.counter;
+          }
+        }
+        else if(type == 3)
+        {
+          if(f.counter == min)
+          {
+            if(evict != null)
+            {
+              if(f.virtual_address < evict.virtual_address)
+              {
+                evict = f;
+                min = f.counter;
+                continue;
+              }
+            }
+          }
+          else
+          {
+            evict = f;
+            min = f.counter;
+          }
+        }
+      }
+      type++;
+    } while (evict == null);
+
+      //System.out.println("f.counter " + f.counter + " min: " + min);
+
+    //System.out.println("Swapping out page: " + evict.virtual_address);
+    //System.out.println();
     return physicalMemory.indexOf(evict);
   }
 
   public static void shift()
   {
+    int r=0;
     for(frame f : physicalMemory)
     {
-      if(!f.dirty)
-        f.counter=Math.abs(f.counter>>1);
+      r=f.reference;
+      f.counter=(f.counter>>1)|(f.reference<<3);
+      f.reference=0;
     }
+    refreshCount++;
   }
 
   public static void calcRefresh(int cycles)
   {
-    //System.out.println("" + ticks + " r = " + refresh);
-
-    while(true)
+    //System.out.println("Begin: Cycles: "+ cycles + " Ticks: " + ticks + " refresh: " + refresh);
+    while(ticks-refresh>=0)
     {
-      if(ticks==refresh)
-      {
-        shift();
-        ticks-=refresh;
-      }
-      else if(ticks!=refresh && cycles >= (refresh - ticks))
-      {
-        shift();
-        cycles-=(refresh-ticks);
-        ticks=0;
-      }
-      else
-      {
-        ticks+=cycles;
-        return;
-      }
+      ticks-=refresh;
+      shift();
     }
-    //from count before adding to count after adding if count-1%refresh==0 do a refresh;
+    while(cycles - refresh >= 0)
+    {
+      //System.out.println("Middle: Cycles: "+ cycles + " Ticks: " + ticks + " refresh: " + refresh);
+      cycles-=refresh;
+      shift();
+    }
+    ticks+=cycles;
+    if(ticks%refresh==0)
+    {
+      ticks=0;
+      shift();
+    }
+    //System.out.println("End: Cycles: "+ cycles + " Ticks: " + ticks + " refresh: " + refresh);
   }
 
 }

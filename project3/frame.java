@@ -2,6 +2,7 @@ public class frame
 {
   int frame_number;
   int counter;
+  int reference;
   long virtual_address;
   boolean present;
   boolean dirty;
@@ -13,5 +14,6 @@ public class frame
     present = p;
     dirty = d;
     counter=0;
+    reference=0;
   }
 }
